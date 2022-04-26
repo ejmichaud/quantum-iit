@@ -20,4 +20,18 @@ def test_invert_permutation1():
 def test_bipartitions1():
     indices = [0, 1]
     assert len(list(bipartitions(indices))) == 1
+    indices = [0, 1, 2]
+    bps = list(bipartitions(indices))
+    assert len(bps) == 3
+    assert ([0], [1, 2]) in bps or ([1, 2], [0]) in bps
+    assert ([1], [0, 2]) in bps or ([0, 2], [1]) in bps
+    assert ([2], [0, 1]) in bps or ([0, 1], [2]) in bps
+
+def test_tprod1():
+    assert tprod(2.0, 3.0) == 6.0
+    assert tprod(1.0, 0.0) == 0.0
+    assert tprod(1.0, qt.maximally_mixed_dm(2)) == qt.maximally_mixed_dm(2)
+    assert tprod(1.0, qt.maximally_mixed_dm(2), qt.maximally_mixed_dm(2)) == qt.tensor(qt.maximally_mixed_dm(2), qt.maximally_mixed_dm(2))
+    dms = [qt.rand_dm(2) for _ in range(5)]
+    assert tprod(*dms) == qt.tensor(*dms)
 

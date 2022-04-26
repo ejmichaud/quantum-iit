@@ -11,7 +11,7 @@ After cloning this repository, simply run:
 ```
 python setup.py install
 ```
-from the repository root directory and the `qiit` package will be installed. The only dependencies are numpy and qutip, which will be installed as part of the `qiit` installation if not already present.
+from the repository root directory and the `qiit` module will be installed. The only dependencies are numpy and qutip, which will be installed as part of the `qiit` installation if not already present.
 
 ## Usage
 

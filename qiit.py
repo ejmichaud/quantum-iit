@@ -74,18 +74,17 @@ def noising_omega(X, omega, indices):
 def rho_e(P, M, U, Psi, indices):
     assert U.issuper
     N_Mp_Psi = noising_omega(Psi, complement(M, indices), indices)
-    N_Mp_Psi
-    U_of_N = U * N_Mp_Psi * U.dag()
+    U_of_N = qt.vector_to_operator(U * qt.operator_to_vector(N_Mp_Psi))
     if not P:
         return np.trace(U_of_N)
     return qt.ptrace(U_of_N, P)
 
-def rho_c(P, M, U, Psi, indices):
+def rho_c(P, M, Ustar, Psi, indices):
     N_Mp_Psi = noising_omega(Psi, complement(M, indices), indices)
-    U_of_N = U.dag() * N_Mp_Psi * U
+    Ustar_of_N = qt.vector_to_operator(Ustar * qt.operator_to_vector(N_Mp_Psi)) 
     if not P:
-        return np.trace(U_of_N)
-    return qt.ptrace(U_of_N, P)
+        return np.trace(Ustar_of_N)
+    return qt.ptrace(Ustar_of_N, P)
 
 def ei(P, M, U, Psi, indices):
     A = rho_e(P, M, U, Psi, indices)
@@ -94,8 +93,8 @@ def ei(P, M, U, Psi, indices):
     B = qt.tensor(*[qt.states.maximally_mixed_dm(2) for _ in range(len(P))])
     return qt.tracedist(A, B)
 
-def ci(P, M, U, Psi, indices):
-    A = rho_c(P, M, U, Psi, indices)
+def ci(P, M, Ustar, Psi, indices):
+    A = rho_c(P, M, Ustar, Psi, indices)
     if not P:
         return qt.tracedist(qt.Qobj(A), qt.Qobj(1))
     B = qt.tensor(*[qt.states.maximally_mixed_dm(2) for _ in range(len(P))])
@@ -108,35 +107,25 @@ def phi_e(P, M, U, Psi, indices):
         mask = [(i // (2**k)) % 2 for k in range(n)]
         maskP = mask[:len(P)]
         maskM = mask[len(P):]
-        # print(mask)
-        # print(maskP)
-        # print(maskM)
         P1 = [P[k] for k in range(len(P)) if maskP[k]]
         P2 = complement(P1, P)
         M1 = [M[k] for k in range(len(M)) if maskM[k]]
         M2 = complement(M1, M)
-        # print(f"phi_e computing partitions P={P} <> [P1][P2]={P1}{P1}, M={M} <> [M1][M2]={M1}{M2}")
         rho_PM = rho_e(P, M, U, Psi, indices)
         rho_P1M1 = rho_e(P1, M1, U, Psi, indices)
         rho_P2M2 = rho_e(P2, M2, U, Psi, indices)
         rho_prod = tprod(rho_P1M1, rho_P2M2)
-        # this is a potential bug if I did this wrong
-        # print(P1)
-        # print(P2)
-        # print(P1 + P2)
-        # P_indices = [P.index(x) for x in P]
         if not P:
             dist = qt.tracedist(qt.Qobj(rho_PM), qt.Qobj(rho_prod))
         else:
             P1P2_indices = [P.index(x) for x in P1 + P2]
             rho_prod = rho_prod.permute(P1P2_indices)
             dist = qt.tracedist(rho_PM, rho_prod)
-        # print(dist)
         if dist < best:
             best = dist
     return best if best != float('inf') else 0.0
 
-def phi_c(P, M, U, Psi, indices):
+def phi_c(P, M, Ustar, Psi, indices):
     best = float('inf')
     n = len(P) + len(M)
     for i in range(1, 2**(n-1)):
@@ -147,9 +136,9 @@ def phi_c(P, M, U, Psi, indices):
         P2 = complement(P1, P)
         M1 = [M[k] for k in range(len(M)) if maskM[k]]
         M2 = complement(M1, M)
-        rho_PM = rho_c(P, M, U, Psi, indices)
-        rho_P1M1 = rho_c(P1, M1, U, Psi, indices)
-        rho_P2M2 = rho_c(P2, M2, U, Psi, indices)
+        rho_PM = rho_c(P, M, Ustar, Psi, indices)
+        rho_P1M1 = rho_c(P1, M1, Ustar, Psi, indices)
+        rho_P2M2 = rho_c(P2, M2, Ustar, Psi, indices)
         rho_prod = tprod(rho_P1M1, rho_P2M2)
         if not P:
             dist = qt.tracedist(qt.Qobj(rho_PM), qt.Qobj(rho_prod))
@@ -160,7 +149,6 @@ def phi_c(P, M, U, Psi, indices):
         if dist < best:
             best = dist
     return best if best != float('inf') else 0.0
-
 
 def core_effect(M, U, Psi, indices):
     max_phi = float('-inf')
