@@ -31,7 +31,7 @@ def product_channel(U1, U2):
     krauses_product = [qt.tensor(Vi, Vj) for Vi, Vj in product(krauses1, krauses2)]
     return qt.kraus_to_super(krauses_product)
 
-def partitioned_channel(U, P1, P2):
+# def partitioned_channel(U, P1, P2):
 
 
 def bipartitions(indices):
