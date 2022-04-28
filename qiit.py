@@ -1,12 +1,53 @@
 
 from itertools import product
+from operator import invert
 from re import A
 
 import numpy as np
 import qutip as qt
 
-# def trace(qobj):
-#     return qt.Qobj(np.trace(qobj))
+
+# -------------------------------------- #
+#           UTILITY FUNCTIONS
+# -------------------------------------- #
+
+def complement(subset, indices):
+    """Returns complement of `subset` w.r.t. `indices`.
+    """
+    return [x for x in indices if x not in subset]
+        
+def invert_permutation(perm):
+    """Inverts the permutation perm. `perm` specifies a permutation
+    via a list, where i gets mapped to perm[i] for i in 0,...,n-1.
+    """
+    assert len(perm) == len(set(perm))
+    result = [None] * len(perm)
+    for i in range(len(perm)):
+        result[perm[i]] = i
+    return result
+
+def bipartitions(indices):
+    """Generator of bipartitions of a list of indices.
+    
+    Yields 2-tuples of lists, which are disjoint, and whose union is `indices`.
+    Does not yield the ([], `indices`) bipartition. If len(indices) = n then 
+    yields 2^(n-1) - 1 bipartitions.
+    """
+    n = len(indices)
+    for i in range(1, 2**(n-1)):
+        mask = [(i // (2**k)) % 2 for k in range(n)]
+        partition_A = [indices[j] for j in range(n) if mask[j]]
+        partition_B = [indices[j] for j in range(n) if not mask[j]]
+        yield (partition_A, partition_B)
+
+def subsets(indices):
+    """Generator of all subsets of a list of indices.
+    """
+    n = len(indices)
+    for i in range(2**n):
+        mask = [(i // (2**k)) % 2 for k in range(n)]
+        subset = [indices[k] for k in range(n) if mask[k]]
+        yield subset
 
 def tprod(*args):
     """Computes tensor product of *args. The key behavior difference
@@ -31,52 +72,10 @@ def superoperator_adjoint(U):
     krauses_adjoint = [V.dag() for V in krauses]
     return qt.kraus_to_super(krauses_adjoint)
 
-def product_channel(U1, U2):
-    """Computes product of two unital operations `U1`, `U2`.
 
-    Args:
-        U1: qutip superoperator
-        U2: qutip superoperator
-    Returns:
-        qutip superoperator
-    """
-    assert U1.issuper and U2.issuper
-    krauses1 = qt.to_kraus(U1)
-    krauses2 = qt.to_kraus(U2)
-    krauses_product = [qt.tensor(Vi, Vj) for Vi, Vj in product(krauses1, krauses2)]
-    return qt.kraus_to_super(krauses_product)
-
-# def partitioned_channel(U, P1, P2):
-
-
-def bipartitions(indices):
-    """Generator of bipartitions of a list of indices.
-    
-    Yields 2-tuples of lists, which are disjoint, and whose union is `indices`.
-    Does not yield the ([], `indices`) bipartition. If len(indices) = n then 
-    yields 2^(n-1) - 1 bipartitions.
-    """
-    n = len(indices)
-    for i in range(1, 2**(n-1)):
-        mask = [(i // (2**k)) % 2 for k in range(n)]
-        partition_A = [indices[j] for j in range(n) if mask[j]]
-        partition_B = [indices[j] for j in range(n) if not mask[j]]
-        yield (partition_A, partition_B)
-
-def complement(subset, indices):
-    """Returns complement of `subset` w.r.t. `indices`.
-    """
-    return [x for x in indices if x not in subset]
-        
-def invert_permutation(perm):
-    """Inverts the permutation perm. `perm` specifies a permutation
-    via a list, where i gets mapped to perm[i] for i in 0,...,n-1.
-    """
-    assert len(perm) == len(set(perm))
-    result = [None] * len(perm)
-    for i in range(len(perm)):
-        result[perm[i]] = i
-    return result
+# -------------------------------------- #
+#           SIMPLE IIT FUNCTIONS
+# -------------------------------------- #
 
 def noising_omega(X, omega, indices):
     """Noises the omega subsystem. Computes the partial trace over the `omega`
@@ -198,6 +197,8 @@ def phi_e(P, M, U, Psi, indices):
     """
     best = float('inf')
     n = len(P) + len(M)
+    if n == 0:
+        return 0.0
     for i in range(1, 2**(n-1)):
         mask = [(i // (2**k)) % 2 for k in range(n)]
         maskP = mask[:len(P)]
@@ -240,6 +241,8 @@ def phi_c(P, M, Ustar, Psi, indices):
     """
     best = float('inf')
     n = len(P) + len(M)
+    if n == 0:
+        return 0.0
     for i in range(1, 2**(n-1)):
         mask = [(i // (2**k)) % 2 for k in range(n)]
         maskP = mask[:len(P)]
@@ -316,23 +319,27 @@ def repertoire_e(M, U, Psi, indices):
     """Computes rho_e(P_star|M) tensor producted with the rest of the system
     maximally-mixed. here P_star is the core effect of M w.r.t. U and Psi.
     """
-    P_star, _ = core_effect(M, U, Psi, indices)
+    P_star, integrated_e_phi = core_effect(M, U, Psi, indices)
     rho_e_star = rho_e(P_star, M, U, Psi, indices)
     P_starp = complement(P_star, indices)
+    if len(P_starp) == 0:
+        return rho_e_star, integrated_e_phi
     noise_part = qt.tensor(*[qt.states.maximally_mixed_dm(2) for _ in range(len(P_starp))])
     unordered_product = tprod(rho_e_star, noise_part)
-    return unordered_product.permute(invert_permutation(P_star + P_starp))
+    return unordered_product.permute(invert_permutation(P_star + P_starp)), integrated_e_phi
 
 def repertoire_c(M, Ustar, Psi, indices):
     """Computes rho_e(P_star|M) tensor producted with the rest of the system
     maximally-mixed. here P_star is the core effect of M w.r.t. Ustar and Psi.
     """
-    P_star, _ = core_cause(M, Ustar, Psi, indices)
-    rho_e_star = rho_c(P_star, M, Ustar, Psi, indices)
+    P_star, integrated_c_phi = core_cause(M, Ustar, Psi, indices)
+    rho_c_star = rho_c(P_star, M, Ustar, Psi, indices)
     P_starp = complement(P_star, indices)
+    if len(P_starp) == 0:
+        return rho_c_star, integrated_c_phi
     noise_part = qt.tensor(*[qt.states.maximally_mixed_dm(2) for _ in range(len(P_starp))])
-    unordered_product = tprod(rho_e_star, noise_part)
-    return unordered_product.permute(invert_permutation(P_star + P_starp))
+    unordered_product = tprod(rho_c_star, noise_part)
+    return unordered_product.permute(invert_permutation(P_star + P_starp)),  integrated_c_phi
 
 def integrated_phi(M, U, Ustar, Psi, indices):
     """Computes integrated cause/effect information of M.
@@ -341,10 +348,131 @@ def integrated_phi(M, U, Ustar, Psi, indices):
     _, integrated_c_phi = core_cause(M, Ustar, Psi, indices)
     return min(integrated_e_phi, integrated_c_phi)
 
+# -------------------------------------- #
+#           FULL IIT FUNCTIONS
+# -------------------------------------- #
 
+def product_channel(U1, U2, P1, P2):
+    """Computes product of two unital operations `U1`, `U2`.
 
+    TODO: is there a permutation problem here?
 
+    Args:
+        U1: qutip superoperator
+        U2: qutip superoperator
+    Returns:
+        qutip superoperator
+    """
+    assert U1.issuper and U2.issuper
+    krauses1 = qt.to_kraus(U1)
+    krauses2 = qt.to_kraus(U2)
+    # Am I applying this permutation correctly?
+    krauses_product = [qt.tensor(Vi, Vj).permute(invert_permutation(P1 + P2)) for Vi, Vj in product(krauses1, krauses2)]
+    return qt.kraus_to_super(krauses_product)
 
+def partitioned_channel(U, P1, P2, indices):
+    """Partitions the channel U into a product channel.
+
+    Args:
+        U: qutip superoperator
+        P1 (list): subset of `indices`
+        P2 (list): subset of `indices`
+        indices (list): indices of all parts of the system
+    Returns:
+        qutip superoperator
+    """
+    assert U.issuper
+    assert set(P1 + P2) == set(indices)
+    U1_columns = []
+    n = len(indices)
+    n1 = len(P1)
+    n2 = len(P2)
+    for i, j in product(range(2**n1), range(2**n1)):
+        rho = np.zeros((2**n1, 2**n1))
+        rho[j, i] = 1.0 # note that most of these aren't valid density matrices... I think this is fine...
+        rho = qt.Qobj(rho, dims=[[2] * n1, [2] * n1])
+        noise_part = tprod(*[qt.maximally_mixed_dm(2) for _ in range(n - n1)])
+        rho = tprod(rho, noise_part).permute(invert_permutation(P1 + P2))
+        Urho = qt.vector_to_operator(U * qt.operator_to_vector(rho))
+        U1rho = qt.ptrace(Urho, P1)
+        U1_columns.append(qt.operator_to_vector(U1rho))
+    U2_columns = []
+    for i, j in product(range(2**n2), range(2**n2)):
+        rho = np.zeros((2**n2, 2**n2))
+        rho[j, i] = 1.0
+        rho = qt.Qobj(rho, dims=[[2] * n2, [2] * n2])
+        noise_part = tprod(*[qt.maximally_mixed_dm(2) for _ in range(n - n2)])
+        rho = tprod(rho, noise_part).permute(invert_permutation(P2 + P1))
+        Urho = qt.vector_to_operator(U * qt.operator_to_vector(rho))
+        U2rho = qt.ptrace(Urho, P2)
+        U2_columns.append(qt.operator_to_vector(U2rho))
+    U1 = qt.Qobj(np.array(U1_columns).reshape(4**n1, 4**n1), dims=[[[2] * n1, [2] * n1]] * 2)
+    U2 = qt.Qobj(np.array(U2_columns).reshape(4**n2, 4**n2), dims=[[[2] * n2, [2] * n2]] * 2)
+    return product_channel(U1, U2, P1, P2)
+ 
+def CS(U, Ustar, Psi, indices):
+    """Computes the conceptual structure CS(U).
+
+    Args:
+        U: qutip superoperator
+        Ustar: qutip superoperator, the adjoint of the channel U
+        Psi: quantum state
+        indices (list): indices of all parts of the system
+    Returns:
+        dict tuple(M) -> (rho_c(M), rho_e(M), phi(M))
+    """
+    cs_dict = dict()
+    for M in subsets(indices):
+        rc, pc = repertoire_c(M, Ustar, Psi, indices)
+        re, pe = repertoire_e(M, U, Psi, indices)
+        if min(pe, pc) > 0:
+            cs_dict[tuple(M)] = (rc, re, min(pe, pc))
+    return cs_dict
+
+def CS_distance(C1, C2, indices):
+    total = 0
+    for M in subsets(indices):
+        if tuple(M) in C1 and tuple(M) in C2:
+            rc1, re1, p1 = C1[tuple(M)]
+            rc2, re2, p2 = C2[tuple(M)]
+            total += (p1 * rc1 - p2 * rc2).norm()
+            total += (p1 * re1 - p2 * re2).norm()
+        if tuple(M) in C1 and tuple(M) not in C2:
+            rc1, re1, p1 = C1[tuple(M)]
+            total += (p1 * rc1).norm()
+            total += (p1 * re1).norm()
+        if tuple(M) not in C1 and tuple(M) in C2:
+            rc2, re2, p2 = C2[tuple(M)]
+            total += (p2 * rc2).norm()
+            total += (p2 * re2).norm()
+    return 0.25 * total
+
+def II(U, Psi, indices):
+    """The full global network integrated information.
+    
+    Args:
+        U: qutip superoperator
+        Psi: state
+        indices (list): indices of all parts of the system
+    
+    Returns:
+        (float): the integrated information
+    """
+    min_dist = float('inf')
+    Ustar = superoperator_adjoint(U)
+    for P1, P2 in bipartitions(indices):
+        print(f"Partition: ({P1}, {P2})")
+        U12 = partitioned_channel(U, P1, P2, indices)
+        U12star = superoperator_adjoint(U12)
+        C1 = CS(U, Ustar, Psi, indices)
+        C2 = CS(U12, U12star, Psi, indices)
+        print(f"Conceptual Structure 1: {C1}")
+        print(f"Conceptual Structure 2: {C2}")
+        d = CS_distance(C1, C2, indices)
+        if d < min_dist:
+            min_dist = d
+    return min_dist
+        
 
     # for (P1, P2), (M1, M2) in product(bipartitions(P), bipartitions(M)):
     #     print((P1, P2), (M1, M2))

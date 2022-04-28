@@ -27,6 +27,15 @@ def test_bipartitions1():
     assert ([1], [0, 2]) in bps or ([0, 2], [1]) in bps
     assert ([2], [0, 1]) in bps or ([0, 1], [2]) in bps
 
+def test_subsets1():
+    indices = [0, 1]
+    ssets = list(subsets(indices))
+    assert len(ssets) == 4
+    assert [] in ssets
+    assert [0] in ssets
+    assert [1] in ssets
+    assert [0, 1] in ssets
+
 def test_tprod1():
     assert tprod(2.0, 3.0) == 6.0
     assert tprod(1.0, 0.0) == 0.0
