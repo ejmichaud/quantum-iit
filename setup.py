@@ -8,8 +8,9 @@ setup(
         'qutip'
     ],
 	author='Eric J. Michaud',
+	author_email="ericjm@mit.edu",
 	license='MIT',
 	url='https://github.com/ejmichaud/quantum-iit',
-	py_modules=['qiit']
+	packages=["qiit"]
 )
 

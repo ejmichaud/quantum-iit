@@ -6,7 +6,7 @@ import qutip as qt
 from qutip_qip.circuit import QubitCircuit
 from qutip_qip.operations import Gate
 
-from qiit import *
+from qiit.tqiit import *
 import pytest
 
 def test_noising_omega1():

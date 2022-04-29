@@ -1,7 +1,7 @@
 
 import numpy as np
 import qutip as qt
-from qiit import *
+from qiit.utils import *
 
 import pytest
 
