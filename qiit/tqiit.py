@@ -380,7 +380,7 @@ def CS_distance(C1, C2, indices):
             total += (p2 * re2).norm()
     return 0.25 * total
 
-def II(U, Psi, indices):
+def qII3(U, Psi, indices):
     """The full global network integrated information.
     
     Args:
@@ -394,13 +394,13 @@ def II(U, Psi, indices):
     min_dist = float('inf')
     Ustar = superoperator_adjoint(U)
     for P1, P2 in bipartitions(indices):
-        print(f"Partition: ({P1}, {P2})")
+        # print(f"Partition: ({P1}, {P2})")
         U12 = partitioned_channel(U, P1, P2, indices)
         U12star = superoperator_adjoint(U12)
         C1 = CS(U, Ustar, Psi, indices)
         C2 = CS(U12, U12star, Psi, indices)
-        print(f"Conceptual Structure 1: {C1}")
-        print(f"Conceptual Structure 2: {C2}")
+        # print(f"Conceptual Structure 1: {C1}")
+        # print(f"Conceptual Structure 2: {C2}")
         d = CS_distance(C1, C2, indices)
         if d < min_dist:
             min_dist = d

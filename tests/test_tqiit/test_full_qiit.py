@@ -44,7 +44,7 @@ def test_partitioned_channel3():
     assert qt.vector_to_operator(U_P * qt.operator_to_vector(tprod(zero_dm, one_dm))) == tprod(mixed_dm, mixed_dm) 
     assert qt.vector_to_operator(U_P * qt.operator_to_vector(tprod(one_dm, zero_dm))) == tprod(mixed_dm, mixed_dm)     
 
-def test_II1():
+def test_qII31():
     qc = QubitCircuit(N=2, num_cbits=0)
     swap_gate = Gate(name="SWAP", targets=[0, 1])
     qc.add_gate(swap_gate)
@@ -52,17 +52,20 @@ def test_II1():
     zero_dm = qt.basis(2, 0) * qt.basis(2, 0).dag()
     one_dm = qt.basis(2, 1) * qt.basis(2, 1).dag()
     X = tprod(zero_dm, one_dm)
-    assert II(qt.to_super(U), X, [0, 1]) == 0.5
+    assert qII3(qt.to_super(U), X, [0, 1]) == 0.5
 
-def test_II2():
+def test_qII32():
     U = qt.identity([2, 2])
     zero_dm = qt.basis(2, 0) * qt.basis(2, 0).dag()
     one_dm = qt.basis(2, 1) * qt.basis(2, 1).dag()
     X = tprod(zero_dm, one_dm)
-    assert II(qt.to_super(U), X, [0, 1]) == 0.0
+    assert qII3(qt.to_super(U), X, [0, 1]) == 0.0
 
-def test_II3():
-    print("TODO: You deleted a test that was failing! Figure this out!")
+# They claim in the paper that qII3.0(Id) is 3/4 when the input is the
+# EPR pair, but the factorized channel is literally also the identity so 
+# I don't know how this is possible. Either they made a silly mistake or I am
+# seriously wrong about something basic.
+# def test_qII33():
     # zerozero = qt.basis([2, 2], [0, 0])
     # oneone = qt.basis([2, 2], [1, 1])
     # pure = (zerozero + oneone) / np.sqrt(2)
@@ -79,3 +82,6 @@ def test_II3():
 #     phi_states = [z, o, z]
 #     X = tprod(z, o, z)
 #     for 
+
+
+
