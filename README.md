@@ -15,6 +15,17 @@ from the repository root directory and the `qiit` module will be installed. The 
 
 ## Usage
 
+```python
+import qutip as qt
+from qutip.qip.algorithms import qft
+
+from qiit.custom import qIInk
+
+rho0 = qt.rand_dm(16, dims=[[2, 2, 2, 2], [2, 2, 2, 2]])
+U = qft.qft(4)
+print(qIInk(qt.to_super(U), rho0, [0, 1, 2, 3]))
+```
+
 ## Testing
 Several tests are included in the `tests` directory, which can be run with `pytest` from the repository root directory:
 ```
