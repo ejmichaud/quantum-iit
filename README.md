@@ -4,7 +4,7 @@
 
 ⚛️⚡🧠</h1>
 
-Code for measuring *integration* in quantum systems. Includes several new measures and implemenets the measure from [Zandari et al. (2018)](https://arxiv.org/abs/1806.01421). 
+Code for measuring *integration* in quantum systems. Includes several new measures and implements the measure from [Zandari et al. (2018)](https://arxiv.org/abs/1806.01421). 
 
 ## Installation
 After cloning this repository, simply run:
